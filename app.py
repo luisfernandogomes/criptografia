@@ -1,7 +1,7 @@
 from flask import Flask, jsonify,request
 from sqlalchemy import select
 from models import UsuarioExemplo, NotasExemplo, SessionLocalExemplo
-from flask_jwt_extended import get_jwt_identity, JWTManager, create_access_token
+from flask_jwt_extended import get_jwt_identity, JWTManager, create_access_token, jwt_required
 from functools import wraps
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'senha'
@@ -71,6 +71,7 @@ def cadastro():
         banco.close()
 
 @app.route('/notas_exemplo', methods=['POST'])
+@jwt_required
 def criar_nota_exemplo():
     data = request.get_json()
     conteudo = data.get('conteudo')
@@ -93,6 +94,8 @@ def criar_nota_exemplo():
         db.close()
 
 @app.route('/notas_exemplo', methods=['GET'])
+@jwt_required()
+@admin_required
 def listar_notas_exemplo():
     db = SessionLocalExemplo()
     try:
@@ -102,6 +105,21 @@ def listar_notas_exemplo():
         return jsonify(notas_list)
     finally:
         db.close()
+
+@app.route('/listar_pessoas')
+@jwt_required()
+def listar_pessoas():
+    db_session = SessionLocalExemplo()
+    users = db_session.execute(select(UsuarioExemplo)).scalars().all()
+    try:
+        lista = []
+        for user in users:
+            lista.append(user.serialize())
+        return jsonify(lista), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db_session.close()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001) # Rodar em uma porta diferente da API principal
