@@ -11,10 +11,12 @@ def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         current_user = get_jwt_identity()
+        print(current_user)
         db_session = SessionLocalExemplo()
         try:
-            user = db_session.execute(select(UsuarioExemplo).where(UsuarioExemplo.id == current_user)).scalar()
-            if user and user.papel == 'admin':
+            user = db_session.execute(select(UsuarioExemplo).where(UsuarioExemplo.email == current_user)).scalar()
+            print(user)
+            if user and user.papel == "admin":
                 return fn(*args, **kwargs)
 
             return jsonify({'error':'usuario não possui permissão de administrador'})
@@ -71,7 +73,8 @@ def cadastro():
         banco.close()
 
 @app.route('/notas_exemplo', methods=['POST'])
-@jwt_required
+@jwt_required()
+@admin_required
 def criar_nota_exemplo():
     data = request.get_json()
     conteudo = data.get('conteudo')
@@ -93,7 +96,7 @@ def criar_nota_exemplo():
     finally:
         db.close()
 
-@app.route('/notas_exemplo', methods=['GET'])
+@app.route('/listar_notas', methods=['GET'])
 @jwt_required()
 @admin_required
 def listar_notas_exemplo():
